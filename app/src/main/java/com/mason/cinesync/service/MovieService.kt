@@ -6,7 +6,7 @@ import retrofit2.http.Query
 
 interface MovieService {
 
-    @GET("movie/popular")
+    @GET("/api/movies/popular")
     suspend fun getPopularMovies(
         @Query("page") page: Int = 1,
         @Query("language") language: String = "en-US"
