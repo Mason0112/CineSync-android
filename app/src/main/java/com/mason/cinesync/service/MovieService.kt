@@ -1,7 +1,9 @@
 package com.mason.cinesync.service
 
+import com.mason.cinesync.model.dto.MovieDetailResponse
 import com.mason.cinesync.model.dto.PopularMovieApiResponse
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface MovieService {
@@ -11,6 +13,13 @@ interface MovieService {
         @Query("page") page: Int = 1,
         @Query("language") language: String = "en-US"
     ): PopularMovieApiResponse
+
+
+    @GET("/api/movies/details/{id}")
+    suspend fun getMovieDetails(
+        @Path("id") movieId: Int,
+        @Query("language") language: String = "en-US"
+    ): MovieDetailResponse
 
 
 }
