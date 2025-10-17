@@ -10,20 +10,21 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+sealed class PopularMoviesUiState {
+    object Loading : PopularMoviesUiState()
+    data class Success(
+        val movies: List<MovieApiResponse>,
+        val currentPage: Int,
+        val totalPages: Int,
+        val isLoadingMore: Boolean = false
+    ) : PopularMoviesUiState()
+    data class Error(val message: String, val movies: List<MovieApiResponse> = emptyList()) : PopularMoviesUiState()
+}
+
 class PopularMoviesViewModel(private val movieRepository: MovieRepository) : ViewModel() {
 
-    private val _movies = MutableStateFlow<List<MovieApiResponse>>(emptyList())
-    val movies: StateFlow<List<MovieApiResponse>> = _movies.asStateFlow()
-
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
-
-    private var currentPage = 0
-    private var totalPages = 1
-    private var isLoadingMore = false
+    private val _uiState = MutableStateFlow<PopularMoviesUiState>(PopularMoviesUiState.Loading)
+    val uiState: StateFlow<PopularMoviesUiState> = _uiState.asStateFlow()
 
     init {
         // Fetch the first page when the ViewModel is created
@@ -31,32 +32,64 @@ class PopularMoviesViewModel(private val movieRepository: MovieRepository) : Vie
     }
 
     fun loadNextPage() {
-        // 防止重複載入
-        if (isLoadingMore || currentPage >= totalPages) return
+        val currentState = _uiState.value
 
-        isLoadingMore = true
-        _isLoading.value = true
-        _error.value = null
+        // 防止重複載入
+        if (currentState is PopularMoviesUiState.Success &&
+            (currentState.isLoadingMore || currentState.currentPage >= currentState.totalPages)) {
+            return
+        }
+
+        // 如果已經有資料,設置 isLoadingMore
+        if (currentState is PopularMoviesUiState.Success) {
+            _uiState.value = currentState.copy(isLoadingMore = true)
+        } else {
+            _uiState.value = PopularMoviesUiState.Loading
+        }
 
         viewModelScope.launch {
-            movieRepository.getPopularMoviesStream(currentPage + 1, "en-US")
+            // 計算下一頁的頁碼
+            val nextPage = if (currentState is PopularMoviesUiState.Success) {
+                currentState.currentPage + 1
+            } else {
+                1
+            }
+
+            movieRepository.getPopularMoviesStream(nextPage, "en-US")
                 .collect { result ->
                     when (result) {
                         is Result.Loading -> {
-                            // Already handled by _isLoading
+                            // Already handled above
                         }
                         is Result.Success -> {
-                            currentPage = result.data.page
-                            totalPages = result.data.totalPages
-                            // 將新的電影添加到現有列表，並過濾掉重複的 id
-                            _movies.value = (_movies.value + result.data.results).distinctBy { it.id }
-                            _isLoading.value = false
-                            isLoadingMore = false
+                            // 合併新舊資料
+                            val currentMovies = if (_uiState.value is PopularMoviesUiState.Success) {
+                                (_uiState.value as PopularMoviesUiState.Success).movies
+                            } else {
+                                emptyList()
+                            }
+
+                            val updatedMovies = (currentMovies + result.data.results).distinctBy { it.id }
+
+                            _uiState.value = PopularMoviesUiState.Success(
+                                movies = updatedMovies,
+                                currentPage = result.data.page,
+                                totalPages = result.data.totalPages,
+                                isLoadingMore = false
+                            )
                         }
                         is Result.Error -> {
-                            _error.value = result.exception.message
-                            _isLoading.value = false
-                            isLoadingMore = false
+                            // 保留已載入的資料
+                            val currentMovies = if (_uiState.value is PopularMoviesUiState.Success) {
+                                (_uiState.value as PopularMoviesUiState.Success).movies
+                            } else {
+                                emptyList()
+                            }
+
+                            _uiState.value = PopularMoviesUiState.Error(
+                                message = result.exception.message ?: "Unknown error",
+                                movies = currentMovies
+                            )
                         }
                     }
                 }

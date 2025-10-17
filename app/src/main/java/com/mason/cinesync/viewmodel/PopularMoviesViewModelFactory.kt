@@ -9,7 +9,7 @@ import com.mason.cinesync.service.MovieService
 class PopularMoviesViewModelFactory : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(PopularMoviesViewModel::class.java)) {
-            val movieService = RetrofitInstance.create().create(MovieService::class.java)
+            val movieService = RetrofitInstance.createService<MovieService>()
             val movieRepository = MovieRepository(movieService)
             @Suppress("UNCHECKED_CAST")
             return PopularMoviesViewModel(movieRepository) as T

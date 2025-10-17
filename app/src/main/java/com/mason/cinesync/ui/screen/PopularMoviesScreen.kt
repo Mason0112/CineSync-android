@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.mason.cinesync.model.dto.MovieApiResponse
+import com.mason.cinesync.viewmodel.PopularMoviesUiState
 import com.mason.cinesync.viewmodel.PopularMoviesViewModel
 import com.mason.cinesync.viewmodel.PopularMoviesViewModelFactory
 
@@ -36,15 +37,16 @@ import com.mason.cinesync.viewmodel.PopularMoviesViewModelFactory
 fun PopularMoviesScreen(
     viewModel: PopularMoviesViewModel = viewModel(factory = PopularMoviesViewModelFactory())
 ) {
-    val movies by viewModel.movies.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val error by viewModel.error.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
     val listState = rememberLazyGridState()
 
     // 檢測是否滾動到底部，自動載入下一頁
     val shouldLoadMore = remember {
         derivedStateOf {
+            val state = uiState
+            if (state !is PopularMoviesUiState.Success) return@derivedStateOf false
+
             // 目前的列表資訊
             val layoutInfo = listState.layoutInfo
             // 目前列表的總數目
@@ -52,7 +54,10 @@ fun PopularMoviesScreen(
             // 最後一個可見項目的索引
             val lastVisibleItemIndex = (layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) + 1
 
-            lastVisibleItemIndex > (totalItemsNumber - 4) && !isLoading
+            // 檢查是否接近底部且沒有正在載入且還有更多頁面
+            lastVisibleItemIndex > (totalItemsNumber - 4) &&
+                    !state.isLoadingMore &&
+                    state.currentPage < state.totalPages
         }
     }
 
@@ -70,48 +75,98 @@ fun PopularMoviesScreen(
             modifier = Modifier.padding(16.dp)
         )
 
-        if (movies.isEmpty() && isLoading) {
-            // 初次載入
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else if (error != null && movies.isEmpty()) {
-            // 初次載入失敗
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Error: $error")
-            }
-        } else {
-            // 顯示電影列表
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp)
-            ) {
-                items(movies, key = { it.id }) { movie ->
-                    MovieItem(movie = movie)
+        when (val state = uiState) {
+            is PopularMoviesUiState.Loading -> {
+                // 初次載入
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
+            }
 
-                // 載入更多的指示器
-                if (isLoading) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+            is PopularMoviesUiState.Error -> {
+                if (state.movies.isEmpty()) {
+                    // 初次載入失敗
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Error: ${state.message}")
+                            // 可以加入重試按鈕
                         }
                     }
+                } else {
+                    // 載入更多失敗，但保留已有的電影列表
+                    MovieGrid(
+                        movies = state.movies,
+                        listState = listState,
+                        isLoadingMore = false,
+                        errorMessage = state.message
+                    )
+                }
+            }
+
+            is PopularMoviesUiState.Success -> {
+                MovieGrid(
+                    movies = state.movies,
+                    listState = listState,
+                    isLoadingMore = state.isLoadingMore,
+                    errorMessage = null
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MovieGrid(
+    movies: List<MovieApiResponse>,
+    listState: androidx.compose.foundation.lazy.grid.LazyGridState,
+    isLoadingMore: Boolean,
+    errorMessage: String?
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp)
+    ) {
+        items(movies, key = { it.id }) { movie ->
+            MovieItem(movie = movie)
+        }
+
+        // 載入更多的指示器
+        if (isLoadingMore) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+        }
+
+        // 載入更多時發生錯誤
+        if (errorMessage != null) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "載入失敗: $errorMessage",
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }
