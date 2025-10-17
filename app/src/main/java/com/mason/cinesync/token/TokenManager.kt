@@ -23,14 +23,17 @@ object TokenManager {
     }
 
     fun init(context: Context) {
+        // 確保使用 Application Context,避免記憶體洩漏
+        val appContext = context.applicationContext
+
         // 建立或取得 Master Key
-        val masterKey = MasterKey.Builder(context)
+        val masterKey = MasterKey.Builder(appContext)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
 
         // 使用加密的 SharedPreferences
         sharedPreferences = EncryptedSharedPreferences.create(
-            context,
+            appContext,
             "auth_prefs",
             masterKey,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,

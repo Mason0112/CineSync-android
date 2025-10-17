@@ -2,7 +2,6 @@ package com.mason.cinesync.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mason.cinesync.model.Result
 import com.mason.cinesync.model.dto.MovieApiResponse
 import com.mason.cinesync.repository.MovieRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,51 +47,44 @@ class PopularMoviesViewModel(private val movieRepository: MovieRepository) : Vie
         }
 
         viewModelScope.launch {
-            // 計算下一頁的頁碼
-            val nextPage = if (currentState is PopularMoviesUiState.Success) {
-                currentState.currentPage + 1
-            } else {
-                1
-            }
-
-            movieRepository.getPopularMoviesStream(nextPage, "en-US")
-                .collect { result ->
-                    when (result) {
-                        is Result.Loading -> {
-                            // Already handled above
-                        }
-                        is Result.Success -> {
-                            // 合併新舊資料
-                            val currentMovies = if (_uiState.value is PopularMoviesUiState.Success) {
-                                (_uiState.value as PopularMoviesUiState.Success).movies
-                            } else {
-                                emptyList()
-                            }
-
-                            val updatedMovies = (currentMovies + result.data.results).distinctBy { it.id }
-
-                            _uiState.value = PopularMoviesUiState.Success(
-                                movies = updatedMovies,
-                                currentPage = result.data.page,
-                                totalPages = result.data.totalPages,
-                                isLoadingMore = false
-                            )
-                        }
-                        is Result.Error -> {
-                            // 保留已載入的資料
-                            val currentMovies = if (_uiState.value is PopularMoviesUiState.Success) {
-                                (_uiState.value as PopularMoviesUiState.Success).movies
-                            } else {
-                                emptyList()
-                            }
-
-                            _uiState.value = PopularMoviesUiState.Error(
-                                message = result.exception.message ?: "Unknown error",
-                                movies = currentMovies
-                            )
-                        }
-                    }
+            try {
+                // 計算下一頁的頁碼
+                val nextPage = if (currentState is PopularMoviesUiState.Success) {
+                    currentState.currentPage + 1
+                } else {
+                    1
                 }
+
+                val result = movieRepository.getPopularMovies(nextPage, "en-US")
+
+                // 合併新舊資料
+                val currentMovies = if (_uiState.value is PopularMoviesUiState.Success) {
+                    (_uiState.value as PopularMoviesUiState.Success).movies
+                } else {
+                    emptyList()
+                }
+
+                val updatedMovies = (currentMovies + result.results).distinctBy { it.id }
+
+                _uiState.value = PopularMoviesUiState.Success(
+                    movies = updatedMovies,
+                    currentPage = result.page,
+                    totalPages = result.totalPages,
+                    isLoadingMore = false
+                )
+            } catch (e: Exception) {
+                // 保留已載入的資料
+                val currentMovies = if (_uiState.value is PopularMoviesUiState.Success) {
+                    (_uiState.value as PopularMoviesUiState.Success).movies
+                } else {
+                    emptyList()
+                }
+
+                _uiState.value = PopularMoviesUiState.Error(
+                    message = e.message ?: "Unknown error",
+                    movies = currentMovies
+                )
+            }
         }
     }
 
