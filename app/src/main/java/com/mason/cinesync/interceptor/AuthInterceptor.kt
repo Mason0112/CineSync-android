@@ -32,8 +32,8 @@ class AuthInterceptor : Interceptor {
             // 清除無效的 token
             TokenManager.deleteToken()
 
-            // 可以在這裡觸發事件通知 UI 跳轉到登入畫面
-            // 或嘗試刷新 token（如果有 refresh token 機制）
+            // 通知 UI 層需要導航到登入畫面
+            TokenManager.notifyLogout()
 
             throw IOException("Unauthorized: Token expired or invalid")
         }

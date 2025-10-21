@@ -4,7 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.mason.cinesync.ui.screen.PopularMoviesScreen
+import androidx.navigation.compose.rememberNavController
+import com.mason.cinesync.navigation.AppNavGraph
 import com.mason.cinesync.ui.theme.CineSyncTheme
 
 class MainActivity : ComponentActivity() {
@@ -13,7 +14,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             CineSyncTheme {
-                PopularMoviesScreen()
+                val navController = rememberNavController()
+                AppNavGraph(navController = navController)
             }
         }
     }

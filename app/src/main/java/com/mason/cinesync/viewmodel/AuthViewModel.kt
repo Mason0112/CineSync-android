@@ -4,9 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mason.cinesync.model.dto.LoginResponseDto
 import com.mason.cinesync.model.dto.UserLoginDto
+import com.mason.cinesync.model.dto.UserRegisterDto
 import com.mason.cinesync.repository.AuthRepository
+import com.mason.cinesync.token.TokenManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 
@@ -23,7 +26,6 @@ class AuthViewModel (private val authRepository: AuthRepository) : ViewModel() {
     // Publicly exposed StateFlow for the UI to observe
     val uiState: StateFlow<AuthUiState> = _uiState
 
-
     fun login(request: UserLoginDto) {
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
@@ -34,6 +36,24 @@ class AuthViewModel (private val authRepository: AuthRepository) : ViewModel() {
                 _uiState.value = AuthUiState.Error(e.message ?: "Login failed")
             }
         }
+    }
+
+    fun register(request: UserRegisterDto) {
+        viewModelScope.launch {
+            _uiState.value = AuthUiState.Loading
+            try {
+                val response = authRepository.register(request)
+                _uiState.value = AuthUiState.Success(response)
+            } catch (e: Exception) {
+                _uiState.value = AuthUiState.Error(e.message ?: "Registration failed")
+            }
+        }
+    }
+
+
+    fun logout() {
+        authRepository.logout()
+        _uiState.value = AuthUiState.Idle
     }
 
 

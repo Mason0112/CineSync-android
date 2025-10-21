@@ -3,7 +3,9 @@ package com.mason.cinesync.service
 import com.mason.cinesync.model.dto.LoginResponseDto
 import com.mason.cinesync.model.dto.UserLoginDto
 import com.mason.cinesync.model.dto.UserRegisterDto
+import com.mason.cinesync.model.dto.UsersDto
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 
 interface UsersService {
@@ -13,4 +15,7 @@ interface UsersService {
 
     @POST("/api/auth/register")
     suspend fun register(@Body registerRequest: UserRegisterDto): LoginResponseDto
+
+    @GET("/api/users/me")
+    suspend fun getLoggedInUser(): UsersDto
 }

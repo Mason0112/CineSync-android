@@ -5,9 +5,22 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.launch
 
 object TokenManager {
     private lateinit var sharedPreferences: SharedPreferences
+
+    // 用於通知 UI 層需要導航到登入畫面
+    private val _logoutFlow = MutableSharedFlow<Unit>(replay = 0)
+    val logoutFlow: SharedFlow<Unit> = _logoutFlow
+
+    // 用於在非協程環境中發送事件
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private const val TOKEN_KEY = "jwt_token"
     private const val REFRESH_TOKEN_KEY = "refresh_token"
@@ -132,6 +145,16 @@ object TokenManager {
             remove(TOKEN_KEY)
             remove(REFRESH_TOKEN_KEY)
             remove(TOKEN_EXPIRY_KEY)
+        }
+    }
+
+    /**
+     * 通知 UI 層需要導航到登入畫面
+     * 由 Interceptor 或其他需要觸發登出的地方呼叫
+     */
+    fun notifyLogout() {
+        scope.launch {
+            _logoutFlow.emit(Unit)
         }
     }
 
