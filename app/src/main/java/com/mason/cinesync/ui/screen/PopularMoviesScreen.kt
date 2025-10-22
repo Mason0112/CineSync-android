@@ -13,7 +13,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -21,6 +23,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -29,15 +32,22 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.mason.cinesync.model.dto.MovieApiResponse
+import com.mason.cinesync.ui.component.CineSyncTopBar
+import com.mason.cinesync.viewmodel.AuthViewModelFactory
 import com.mason.cinesync.viewmodel.PopularMoviesUiState
 import com.mason.cinesync.viewmodel.PopularMoviesViewModel
 import com.mason.cinesync.viewmodel.PopularMoviesViewModelFactory
+import com.mason.cinesync.viewmodel.UserViewModel
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PopularMoviesScreen(
-    viewModel: PopularMoviesViewModel = viewModel(factory = PopularMoviesViewModelFactory())
+    viewModel: PopularMoviesViewModel = viewModel(factory = PopularMoviesViewModelFactory()),
+    userViewModel: UserViewModel = viewModel(factory = AuthViewModelFactory())
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
 
     val listState = rememberLazyGridState()
 
@@ -67,13 +77,23 @@ fun PopularMoviesScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Text(
-            text = "電影清單",
-            fontSize = 28.sp,
-            style = MaterialTheme.typography.headlineLarge,
-            modifier = Modifier.padding(16.dp)
-        )
+    Scaffold(
+        topBar = {
+            CineSyncTopBar(
+                title = "CineSync",
+                onLogoutClick = {
+                    coroutineScope.launch {
+                        userViewModel.logout()
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
 
         when (val state = uiState) {
             is PopularMoviesUiState.Loading -> {
@@ -117,6 +137,7 @@ fun PopularMoviesScreen(
                     errorMessage = null
                 )
             }
+        }
         }
     }
 }

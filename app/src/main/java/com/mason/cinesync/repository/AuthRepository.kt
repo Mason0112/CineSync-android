@@ -4,11 +4,11 @@ import android.util.Log
 import com.mason.cinesync.model.dto.LoginResponseDto
 import com.mason.cinesync.model.dto.UserLoginDto
 import com.mason.cinesync.model.dto.UserRegisterDto
-import com.mason.cinesync.service.UsersService
+import com.mason.cinesync.service.AuthService
 import com.mason.cinesync.token.TokenManager
 
 class AuthRepository(
-    private val authApiService: UsersService,
+    private val authApiService: AuthService,
     private val tokenManager: TokenManager
 ) {
     private val TAG = AuthRepository::class.java.simpleName

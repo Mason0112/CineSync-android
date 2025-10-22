@@ -50,7 +50,6 @@ class AuthViewModel (private val authRepository: AuthRepository) : ViewModel() {
         }
     }
 
-
     fun logout() {
         authRepository.logout()
         _uiState.value = AuthUiState.Idle
