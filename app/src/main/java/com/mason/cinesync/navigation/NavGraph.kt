@@ -21,27 +21,22 @@ object Routes {
 fun AppNavGraph(
     navController: NavHostController
 ) {
-    // 在函數體內檢查 Token 狀態，確保 TokenManager 已初始化
-    val startDestination = if (TokenManager.hasValidToken()) {
-        Routes.MOVIES
-    } else {
-        Routes.LOGIN
-    }
-
-    // 監聽登出事件
-    LaunchedEffect(Unit) {
-        TokenManager.logoutFlow.collect {
-            // 當收到登出事件時，導航到登入畫面並清除返回堆疊
-            navController.navigate(Routes.LOGIN) {
-                popUpTo(0) { inclusive = true }
-            }
-        }
-    }
+    // 電影畫面作為主畫面，不需要登入即可查看
+    val startDestination = Routes.MOVIES
 
     NavHost(
         navController = navController,
         startDestination = startDestination
     ) {
+        // 電影列表畫面（主畫面）
+        composable(Routes.MOVIES) {
+            PopularMoviesScreen(
+                onNavigateToLogin = {
+                    navController.navigate(Routes.LOGIN)
+                }
+            )
+        }
+
         // 登入畫面
         composable(Routes.LOGIN) {
             LoginScreen(
@@ -49,10 +44,8 @@ fun AppNavGraph(
                     navController.navigate(Routes.REGISTER)
                 },
                 onLoginSuccess = {
-                    navController.navigate(Routes.MOVIES) {
-                        // 清除登入和註冊畫面，防止返回
-                        popUpTo(Routes.LOGIN) { inclusive = true }
-                    }
+                    // 登入成功後返回電影畫面
+                    navController.popBackStack(Routes.MOVIES, inclusive = false)
                 }
             )
         }
@@ -64,17 +57,10 @@ fun AppNavGraph(
                     navController.popBackStack()
                 },
                 onRegisterSuccess = {
-                    navController.navigate(Routes.MOVIES) {
-                        // 清除登入和註冊畫面，防止返回
-                        popUpTo(Routes.LOGIN) { inclusive = true }
-                    }
+                    // 註冊成功後返回電影畫面
+                    navController.popBackStack(Routes.MOVIES, inclusive = false)
                 }
             )
-        }
-
-        // 電影列表畫面
-        composable(Routes.MOVIES) {
-            PopularMoviesScreen()
         }
     }
 }

@@ -2,6 +2,7 @@ package com.mason.cinesync.ui.component
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -16,7 +17,9 @@ import androidx.compose.ui.Modifier
 @Composable
 fun CineSyncTopBar(
     title: String,
-    onLogoutClick: () -> Unit,
+    isLoggedIn: Boolean,
+    onLoginClick: () -> Unit = {},
+    onLogoutClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     TopAppBar(
@@ -27,11 +30,22 @@ fun CineSyncTopBar(
             )
         },
         actions = {
-            IconButton(onClick = onLogoutClick) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                    contentDescription = "Logout"
-                )
+            if (isLoggedIn) {
+                // 已登入：顯示登出按鈕
+                IconButton(onClick = onLogoutClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                        contentDescription = "Logout"
+                    )
+                }
+            } else {
+                // 未登入：顯示登入按鈕
+                IconButton(onClick = onLoginClick) {
+                    Icon(
+                        imageVector = Icons.Filled.AccountCircle,
+                        contentDescription = "Login"
+                    )
+                }
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(

@@ -16,6 +16,6 @@ class AuthViewModelFactory : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             return AuthViewModel(authRepository) as T
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
+        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
 }

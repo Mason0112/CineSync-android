@@ -22,8 +22,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -32,22 +34,33 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.mason.cinesync.model.dto.MovieApiResponse
+import com.mason.cinesync.token.TokenManager
 import com.mason.cinesync.ui.component.CineSyncTopBar
+import com.mason.cinesync.viewmodel.AuthViewModel
 import com.mason.cinesync.viewmodel.AuthViewModelFactory
 import com.mason.cinesync.viewmodel.PopularMoviesUiState
 import com.mason.cinesync.viewmodel.PopularMoviesViewModel
 import com.mason.cinesync.viewmodel.PopularMoviesViewModelFactory
-import com.mason.cinesync.viewmodel.UserViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PopularMoviesScreen(
     viewModel: PopularMoviesViewModel = viewModel(factory = PopularMoviesViewModelFactory()),
-    userViewModel: UserViewModel = viewModel(factory = AuthViewModelFactory())
+    authViewModel: AuthViewModel = viewModel(factory = AuthViewModelFactory()),
+    onNavigateToLogin: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val coroutineScope = rememberCoroutineScope()
+
+    // 追踪登录状态
+    var isLoggedIn by remember { mutableStateOf(TokenManager.hasValidToken()) }
+
+    // 监听 logout flow 来更新登录状态
+    LaunchedEffect(Unit) {
+        TokenManager.logoutFlow.collect {
+            isLoggedIn = false
+        }
+    }
 
     val listState = rememberLazyGridState()
 
@@ -81,10 +94,13 @@ fun PopularMoviesScreen(
         topBar = {
             CineSyncTopBar(
                 title = "CineSync",
+                isLoggedIn = isLoggedIn,
+                onLoginClick = {
+                    onNavigateToLogin()
+                },
                 onLogoutClick = {
-                    coroutineScope.launch {
-                        userViewModel.logout()
-                    }
+                    authViewModel.logout()
+                    isLoggedIn = false
                 }
             )
         }
