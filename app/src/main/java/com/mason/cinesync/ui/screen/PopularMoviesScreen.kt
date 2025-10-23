@@ -24,13 +24,11 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.mason.cinesync.model.dto.MovieApiResponse
@@ -41,30 +39,41 @@ import com.mason.cinesync.viewmodel.AuthViewModelFactory
 import com.mason.cinesync.viewmodel.PopularMoviesUiState
 import com.mason.cinesync.viewmodel.PopularMoviesViewModel
 import com.mason.cinesync.viewmodel.PopularMoviesViewModelFactory
-import kotlinx.coroutines.launch
+import com.mason.cinesync.viewmodel.UsersViewModel
+import com.mason.cinesync.viewmodel.UsersViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PopularMoviesScreen(
     viewModel: PopularMoviesViewModel = viewModel(factory = PopularMoviesViewModelFactory()),
     authViewModel: AuthViewModel = viewModel(factory = AuthViewModelFactory()),
+    usersViewModel: UsersViewModel = viewModel(factory = UsersViewModelFactory()),
     onNavigateToLogin: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // 追踪登录状态
+    val loginUserState by usersViewModel.userUiState.collectAsState()
     var isLoggedIn by remember { mutableStateOf(TokenManager.hasValidToken()) }
 
-    // 监听 logout flow 来更新登录状态
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn) {
+            usersViewModel.loadLoggedInUser()
+        }
+    }
+
     LaunchedEffect(Unit) {
         TokenManager.logoutFlow.collect {
             isLoggedIn = false
         }
     }
 
+    val userName = when (val state = loginUserState) {
+        is com.mason.cinesync.viewmodel.UsersUiState.Success -> state.loginResponse.userName
+        else -> null
+    }
+
     val listState = rememberLazyGridState()
 
-    // 檢測是否滾動到底部，自動載入下一頁
     val shouldLoadMore = remember {
         derivedStateOf {
             val state = uiState
@@ -95,6 +104,7 @@ fun PopularMoviesScreen(
             CineSyncTopBar(
                 title = "CineSync",
                 isLoggedIn = isLoggedIn,
+                userName = userName,
                 onLoginClick = {
                     onNavigateToLogin()
                 },
@@ -110,50 +120,49 @@ fun PopularMoviesScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-
-        when (val state = uiState) {
-            is PopularMoviesUiState.Loading -> {
-                // 初次載入
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-
-            is PopularMoviesUiState.Error -> {
-                if (state.movies.isEmpty()) {
-                    // 初次載入失敗
+            when (val state = uiState) {
+                is PopularMoviesUiState.Loading -> {
+                    // 初次載入
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Error: ${state.message}")
-                            // 可以加入重試按鈕
-                        }
+                        CircularProgressIndicator()
                     }
-                } else {
-                    // 載入更多失敗，但保留已有的電影列表
+                }
+
+                is PopularMoviesUiState.Error -> {
+                    if (state.movies.isEmpty()) {
+                        // 初次載入失敗
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Error: ${state.message}")
+                                // 可以加入重試按鈕
+                            }
+                        }
+                    } else {
+                        // 載入更多失敗，但保留已有的電影列表
+                        MovieGrid(
+                            movies = state.movies,
+                            listState = listState,
+                            isLoadingMore = false,
+                            errorMessage = state.message
+                        )
+                    }
+                }
+
+                is PopularMoviesUiState.Success -> {
                     MovieGrid(
                         movies = state.movies,
                         listState = listState,
-                        isLoadingMore = false,
-                        errorMessage = state.message
+                        isLoadingMore = state.isLoadingMore,
+                        errorMessage = null
                     )
                 }
             }
-
-            is PopularMoviesUiState.Success -> {
-                MovieGrid(
-                    movies = state.movies,
-                    listState = listState,
-                    isLoadingMore = state.isLoadingMore,
-                    errorMessage = null
-                )
-            }
-        }
         }
     }
 }

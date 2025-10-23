@@ -18,16 +18,24 @@ import androidx.compose.ui.Modifier
 fun CineSyncTopBar(
     title: String,
     isLoggedIn: Boolean,
+    userName: String? = null,
     onLoginClick: () -> Unit = {},
     onLogoutClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     TopAppBar(
         title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineMedium
-            )
+            if (isLoggedIn && userName != null) {
+                Text(
+                    text = "Hi, $userName",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+            } else {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineMedium
+                )
+            }
         },
         actions = {
             if (isLoggedIn) {
