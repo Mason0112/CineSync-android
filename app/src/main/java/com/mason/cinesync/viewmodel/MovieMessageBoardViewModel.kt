@@ -70,7 +70,7 @@ class MovieMessageBoardViewModel(
     }
 
 
-    private fun loadMovieAndComments(page: Int = 1) {
+    private fun loadMovieAndComments(page: Int = 0) {
         viewModelScope.launch {
             try {
                 // Load movie details and first page of comments in parallel
@@ -80,13 +80,13 @@ class MovieMessageBoardViewModel(
                     async { commentRepository.getComments(movieId.toString(), page, pageSize) }
 
                 val movieDetail = movieDetailDeferred.await()
-                val comments = commentsDeferred.await()
+                val commentsPage = commentsDeferred.await()
 
                 _uiState.value = MovieMessageBoardUiState.Success(
                     movieDetail = movieDetail,
-                    comments = comments,
+                    comments = commentsPage.content,
                     currentPage = page,
-                    hasMoreComments = comments.size >= pageSize
+                    hasMoreComments = !commentsPage.last
                 )
             } catch (e: Exception) {
                 _uiState.value = MovieMessageBoardUiState.Error(
@@ -105,13 +105,13 @@ class MovieMessageBoardViewModel(
         viewModelScope.launch {
             try {
                 val nextPage = currentState.currentPage + 1
-                val newComments =
+                val commentsPage =
                     commentRepository.getComments(movieId.toString(), nextPage, pageSize)
 
                 _uiState.value = currentState.copy(
-                    comments = (currentState.comments + newComments).distinctBy { it.id },
+                    comments = (currentState.comments + commentsPage.content).distinctBy { it.id },
                     currentPage = nextPage,
-                    hasMoreComments = newComments.size >= pageSize
+                    hasMoreComments = !commentsPage.last
                 )
             } catch (e: Exception) {
                 // Keep existing state on error

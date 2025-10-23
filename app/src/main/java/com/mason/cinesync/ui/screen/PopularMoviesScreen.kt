@@ -48,7 +48,8 @@ fun PopularMoviesScreen(
     viewModel: PopularMoviesViewModel = viewModel(factory = PopularMoviesViewModelFactory()),
     authViewModel: AuthViewModel = viewModel(factory = AuthViewModelFactory()),
     usersViewModel: UsersViewModel = viewModel(factory = UsersViewModelFactory()),
-    onNavigateToLogin: () -> Unit = {}
+    onNavigateToLogin: () -> Unit = {},
+    onMovieClick: (Int) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -88,6 +89,7 @@ fun PopularMoviesScreen(
 
             // 檢查是否接近底部且沒有正在載入且還有更多頁面
             lastVisibleItemIndex > (totalItemsNumber - 4) &&
+
                     !state.isLoadingMore &&
                     state.currentPage < state.totalPages
         }
@@ -149,7 +151,8 @@ fun PopularMoviesScreen(
                             movies = state.movies,
                             listState = listState,
                             isLoadingMore = false,
-                            errorMessage = state.message
+                            errorMessage = state.message,
+                            onMovieClick = onMovieClick
                         )
                     }
                 }
@@ -159,7 +162,8 @@ fun PopularMoviesScreen(
                         movies = state.movies,
                         listState = listState,
                         isLoadingMore = state.isLoadingMore,
-                        errorMessage = null
+                        errorMessage = null,
+                        onMovieClick = onMovieClick
                     )
                 }
             }
@@ -172,7 +176,8 @@ private fun MovieGrid(
     movies: List<MovieApiResponse>,
     listState: androidx.compose.foundation.lazy.grid.LazyGridState,
     isLoadingMore: Boolean,
-    errorMessage: String?
+    errorMessage: String?,
+    onMovieClick: (Int) -> Unit = {}
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -183,7 +188,10 @@ private fun MovieGrid(
         contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp)
     ) {
         items(movies, key = { it.id }) { movie ->
-            MovieItem(movie = movie)
+            MovieItem(
+                movie = movie,
+                onClick = { onMovieClick(movie.id.toInt()) }
+            )
         }
 
         // 載入更多的指示器
@@ -220,8 +228,13 @@ private fun MovieGrid(
 }
 
 @Composable
-fun MovieItem(movie: MovieApiResponse) {
-    Card {
+fun MovieItem(
+    movie: MovieApiResponse,
+    onClick: () -> Unit = {}
+) {
+    Card(
+        onClick = onClick
+    ) {
         AsyncImage(
             model = "https://image.tmdb.org/t/p/w500${movie.posterPath}",
             contentDescription = movie.title,

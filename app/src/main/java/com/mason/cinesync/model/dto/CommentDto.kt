@@ -1,8 +1,6 @@
 package com.mason.cinesync.model.dto
 
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
-import java.time.LocalDateTime
 
 @Serializable
 data class CommentDto(
@@ -11,12 +9,23 @@ data class CommentDto(
     val userId: Long,
     val userName: String = "",
     val content: String,
-    @Contextual val createdAt: LocalDateTime?,
-    @Contextual val updatedAt: LocalDateTime?,
+    val createdAt: String? = null,
+    val updatedAt: String? = null
 )
 
 @Serializable
 data class CommentRequest(
     val movieId: String,
     val content: String
+)
+
+@Serializable
+data class Page<T>(
+    val content: List<T>,
+    val totalElements: Int,
+    val totalPages: Int,
+    val number: Int,
+    val size: Int,
+    val first: Boolean,
+    val last: Boolean
 )

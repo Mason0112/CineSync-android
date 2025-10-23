@@ -15,7 +15,7 @@ interface MovieService {
     ): PopularMovieApiResponse
 
 
-    @GET("/api/movies/details/{movie_id}")
+    @GET("/api/movies/detail/{movie_id}")
     suspend fun getMovieDetails(
         @Path("movie_id") movieId: Int,
         @Query("language") language: String = "en-US"
